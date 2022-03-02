@@ -4,14 +4,15 @@
 
 package frc.robot;
 
-import edu.wpi.first.wpilibj.PowerDistribution;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj.motorcontrol.Spark;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 import com.ctre.phoenix.motorcontrol.can.VictorSPX;
 import com.ctre.phoenix.motorcontrol.ControlMode;
+import com.revrobotics.CANSparkMax;
+import com.revrobotics.CANSparkMax.IdleMode;
+import com.revrobotics.CANSparkMaxLowLevel.MotorType;
 
 /**
  * The VM is configured to automatically run this class, and to call the functions corresponding to
@@ -26,10 +27,11 @@ public class Robot extends TimedRobot {
   VictorSPX driveRightA = new VictorSPX(Constants.RIGHT_MOTOR_A);
   VictorSPX driveRightB = new VictorSPX(Constants.RIGHT_MOTOR_B);
   
+  
   //Defining Intake & Shooter Hardware
   Spark intake = new Spark(Constants.INTAKE_MOTOR);
   Spark intakeBelt = new Spark(Constants.INTAKE_BELT_MOTOR);
-
+  CANSparkMax shooter = new CANSparkMax(Constants.SHOOTER_MOTOR, MotorType.kBrushed);
   //Defining XboxController
   XboxController driverController = new XboxController(Constants.DRIVER_CONTROLLER);
   
@@ -44,6 +46,11 @@ public class Robot extends TimedRobot {
     driveLeftB.setInverted(true);
     driveRightA.setInverted(false);
     driveRightB.setInverted(false);
+
+    shooter.setInverted(false);
+    shooter.setIdleMode(IdleMode.kBrake);
+    shooter.burnFlash();
+
   }
 
   /**
@@ -89,10 +96,11 @@ public class Robot extends TimedRobot {
     //SmartDashboard.putNumber("Trigger Right Value", driverController.getRawAxis(Constants.CONTROLLER_RIGHT_TRIGGER));
     //SmartDashboard.putNumber("Trigger Left Value", driverController.getRawAxis(Constants.CONTROLLER_LEFT_TRIGGER));
 
-    double forward = -driverController.getRawAxis(Constants.CONTROLLER_Y1_AXIS);
-    double turn1 = driverController.getRawAxis(Constants.CONTROLLER_RIGHT_TRIGGER);
-    double turn2 = -driverController.getRawAxis(Constants.CONTROLLER_LEFT_TRIGGER);
-    double turn = (turn1 + turn2);
+    //DriveTrain logic
+    double turn = driverController.getRawAxis(Constants.CONTROLLER_RX_AXIS);
+    double forward1 = driverController.getRawAxis(Constants.CONTROLLER_RIGHT_TRIGGER)*1.2;
+    double forward2 = -driverController.getRawAxis(Constants.CONTROLLER_LEFT_TRIGGER)*1.2;
+    double forward = (forward1 + forward2);
     double driveLeftPower = forward - turn;
     double driveRightPower = forward + turn;
 
@@ -101,11 +109,12 @@ public class Robot extends TimedRobot {
     driveRightA.set(ControlMode.PercentOutput, driveRightPower*0.5);
     driveRightB.set(ControlMode.PercentOutput, driveRightPower*0.5);
 
-    if(driverController.getRawButton(2)){
+    //Intake logic
+    if(driverController.getRawButton(Constants.CONTROLLER_SHOULDER_RIGHT)){
       intake.set(1);
       intakeBelt.set(1);
     }
-    else if(driverController.getRawButton(1)){
+    else if(driverController.getRawButton(Constants.CONTROLLER_SHOULDER_LEFT)){
       intake.set(-1);
       intakeBelt.set(-1);
     }
@@ -114,7 +123,14 @@ public class Robot extends TimedRobot {
       intakeBelt.set(0);
     }
 
-
+    //Shooter Logic
+    if(driverController.getRawButton(Constants.CONTROLLER_BUTTON_A)){
+      shooter.set(-0.3);
+      intakeBelt.set(1);
+    }
+    else{
+      shooter.set(0);
+    }
   }
 
   /** This function is called once when the robot is disabled. */
