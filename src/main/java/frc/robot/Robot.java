@@ -12,6 +12,7 @@ import com.ctre.phoenix.motorcontrol.can.VictorSPX;
 import com.ctre.phoenix.motorcontrol.ControlMode;
 import com.revrobotics.CANSparkMax;
 import com.revrobotics.CANSparkMax.IdleMode;
+import edu.wpi.first.wpilibj.Timer;
 import com.revrobotics.CANSparkMaxLowLevel.MotorType;
 
 /**
@@ -35,6 +36,8 @@ public class Robot extends TimedRobot {
   //Defining XboxController
   XboxController driverController = new XboxController(Constants.DRIVER_CONTROLLER);
   
+  double autoStart = 0;
+  boolean goForAuto = false;
 
   /**
    * This function is run when the robot is first started up and should be used for any
@@ -48,9 +51,8 @@ public class Robot extends TimedRobot {
     driveRightB.setInverted(false);
 
     shooter.setInverted(false);
-    shooter.setIdleMode(IdleMode.kBrake);
+    shooter.setIdleMode(IdleMode.kCoast);
     shooter.burnFlash();
-
   }
 
   /**
@@ -75,16 +77,41 @@ public class Robot extends TimedRobot {
    */
   @Override
   public void autonomousInit() {
+    autoStart = Timer.getFPGATimestamp();
+    goForAuto = true;
     // m_autoSelected = SmartDashboard.getString("Auto Selector", kDefaultAuto);
-    System.out.println("Auto selected");
+
   }
 
   /** This function is called periodically during autonomous. */
   @Override
   public void autonomousPeriodic() {
-    
+    double autoTimeElapsed = Timer.getFPGATimestamp() - autoStart;
+    if(goForAuto){
+      //series of timed events making up the flow of auto
+      if(autoTimeElapsed < 3){
+        //spit out the ball for three seconds
+        shooter.set(-0.75);
+        intakeBelt.set(1);
+      }else if(autoTimeElapsed < 6){
+        //stop spitting out the ball and drive backwards *slowly* for three seconds
+        shooter.set(0);
+        intakeBelt.set(0);
+        driveLeftA.set(ControlMode.PercentOutput,-0.3);
+        driveLeftB.set(ControlMode.PercentOutput,-0.3);
+        driveRightA.set(ControlMode.PercentOutput,-0.3);
+        driveRightB.set(ControlMode.PercentOutput,-0.3);
+      }else{
+        //do nothing for the rest of auto
+        shooter.set(0);
+        intakeBelt.set(0);
+        driveLeftA.set(ControlMode.PercentOutput,0);
+        driveLeftB.set(ControlMode.PercentOutput,0);
+        driveRightA.set(ControlMode.PercentOutput,0);
+        driveRightB.set(ControlMode.PercentOutput,0);
+      }
+    }
   }
-
   /** This function is called once when teleop is enabled. */
   @Override
   public void teleopInit() {}
@@ -104,10 +131,11 @@ public class Robot extends TimedRobot {
     double driveLeftPower = forward - turn;
     double driveRightPower = forward + turn;
 
-    driveLeftA.set(ControlMode.PercentOutput, driveLeftPower*0.5);
-    driveLeftB.set(ControlMode.PercentOutput, driveLeftPower*0.5);
-    driveRightA.set(ControlMode.PercentOutput, driveRightPower*0.5);
-    driveRightB.set(ControlMode.PercentOutput, driveRightPower*0.5);
+    driveLeftA.set(ControlMode.PercentOutput, driveLeftPower*0.7);
+    driveLeftB.set(ControlMode.PercentOutput, driveLeftPower*0.7);
+    driveRightA.set(ControlMode.PercentOutput, driveRightPower*0.7
+    );
+    driveRightB.set(ControlMode.PercentOutput, driveRightPower*0.7);
 
     //Intake logic
     if(driverController.getRawButton(Constants.CONTROLLER_SHOULDER_RIGHT)){
@@ -124,8 +152,16 @@ public class Robot extends TimedRobot {
     }
 
     //Shooter Logic
-    if(driverController.getRawButton(Constants.CONTROLLER_BUTTON_A)){
-      shooter.set(-0.3);
+    if(driverController.getRawButton(Constants.CONTROLLER_BUTTON_B)){
+      shooter.set(-1);
+      intakeBelt.set(1);
+    }
+    else if(driverController.getRawButton(Constants.CONTROLLER_BUTTON_A)){
+      shooter.set(-0.75);
+      intakeBelt.set(1);
+    }
+    else if(driverController.getRawButton(Constants.CONTROLLER_BUTTON_X)){
+      shooter.set(-0.25);
       intakeBelt.set(1);
     }
     else{
